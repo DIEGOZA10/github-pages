@@ -1,0 +1,92 @@
+title: "Tutorial: How to do GWAS analysis"
+author: "Diego"
+date: "2025-02-23"
+output: html_document
+
+The aim of this R tutorial is to familiarize you with how to perform Genome Wide Association Studies (GWAS) using a General Linear Model (GLM). ThE following packages also incorporates Principle Companent Analysis (PCA) to power the the GWAS analysis. 
+
+The packages qqman and ggplot2 are needed to do GWAS analysis, 
+After downloading packages, make sure to load them into R. 
+For more details see the code below.
+
+# Install qqman package (if not installed yet)
+
+# Load the necessary libraries
+install.packages("qqman")
+install.packages("bigstatsr")
+library(qqman)
+library(bigstatsr)
+library(usethis)
+library(devtools)
+
+## Using the Functions of qqman
+
+#Load files
+snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo2.txt", header = TRUE)
+genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
+# Remove the first column (Taxa ID) if it's present and should not be included in the analysis
+genotype_matrix <- as.matrix(genotype_data[, -1])
+
+# Check variance of each column for the genotype data
+column_variances <- apply(genotype_matrix, 2, var)
+# Identify columns with zero variance
+zero_variance_columns <- which(column_variances == 0)
+zero_variance_columns
+# Remove columns with zero variance
+genotype_matrix_cleaned <- genotype_matrix[, column_variances != 0]
+
+# Load phenotype data 
+phenotype = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/phenotype.txt", head = T)
+# Load covariate data
+covariate = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/covariate.txt", head = T)
+
+# Perform PCA on the genotype data (to capture population structure)
+pca <- prcomp(genotype_matrix_cleaned, scale. = TRUE)
+# Extract the top 10 principal components (adjust as needed)
+pca_data <- pca$x[, 1:10]
+# Combine PCA with the covariate data
+covariate_matrix <- cbind(covariate, pca_data)
+
+# Combine phenotype and covariates data if needed (ensure matching by Taxa ID)
+combined_data <- merge(phenotype, covariate, by = "Taxa")
+
+###Perform GWAS Using GLM with QQman package
+# Prepare the response variable (trait=plant height (PH))
+trait <- phenotype$PH  # Change "PH" to the actual column name of your phenotype data
+
+# Initialize an empty data frame to store results
+results <- data.frame(SNP = colnames(genotype_matrix_cleaned), p_value = NA)
+
+# Perform GWAS for each SNP using GLM
+for (i in 1:ncol(genotype_matrix_cleaned)) {
+  snp_data <- genotype_matrix_cleaned[, i]
+  
+  # Create a data frame for the current SNP and covariates
+  data_for_model <- data.frame(trait = trait, snp_data = snp_data, covariate_matrix)
+  
+  # Fit a logistic regression model (binary phenotype)
+  model <- glm(trait ~ snp_data + ., data = data_for_model, family = "gaussian")  # Change to "gaussian" for continuous traits
+  
+  # Store the p-value from the SNP coefficient
+  results$p_value[i] <- summary(model)$coefficients[2, 4]  # p-value of the SNP coefficient
+}
+
+
+# Prepare data for Manhattan plot (using SNP information)
+manhattan_data <- data.frame(
+  SNP = results$SNP,
+  CHR = snp_info$Chr,  # Corrected access to chromosome data
+  BP = snp_info$BP,   # Corrected access to position data
+  P = results$p_value
+)
+
+# Create Manhattan plot
+library(qqman)
+manhattan(manhattan_data, main = "GWAS Manhattan Plot", col = c("blue4", "orange3","yellow","black","red"),
+          ylim=c(0,10))
+
+# Create QQ plot
+qq(results$p_value)
+
+
+

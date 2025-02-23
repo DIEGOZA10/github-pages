@@ -21,7 +21,7 @@ library(devtools)
 
 ## Using the Functions of qqman
 
-#Load files
+#Load files (change file names as needed)
 snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo2.txt", header = TRUE)
 genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
 # Remove the first column (Taxa ID) if it's present and should not be included in the analysis

@@ -32,11 +32,11 @@ library(GWASP)
 
 ```{r}
 # Load files to perform PCA and incorporate PCs as cofactors for GWAS (Question 1) 
-phenotype = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/phenotype.txt", head = T)
-covariate = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/covariate.txt", head = T)
-snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo2.txt", header = TRUE)
+phenotype = read.table(file="phenotype.txt", head = T)
+covariate = read.table(file="covariate.txt", head = T)
+snp_info <- read.table(file="SNPinfo2.txt", header = TRUE)
 
-genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
+genotype_data = read.table(file="Numeric_gen2.txt", head = T)
 # Remove the first column (Taxa ID) if it's present and should not be included in the analysis
 genotype_matrix <- as.matrix(genotype_data[, -1])
 # Check variance of each column for the genotype data
@@ -119,8 +119,8 @@ sig.snps.geno <- genotype_data[,associated.SNPs] #subset genotype data of only t
 ```{r}
 #Load files to run simulation with GWASbycor function-30 replicates (question 5)
 
-snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo.txt", header = TRUE)
-genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
+snp_info <- read.table(file="SNPinfo.txt", header = TRUE)
+genotype_data = read.table(file="Numeric_gen2.txt", head = T)
 
 # Replicate 30 times and plot the means with GWASbycor function
 nrep=30

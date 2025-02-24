@@ -1,6 +1,6 @@
 title: "Tutorial: How to do GWAS analysis"
 author: "Diego"
-date: "2025-02-23"
+date: "2025-02-24"
 output: html_document
 
 The aim of this R tutorial is to familiarize you with how to perform Genome Wide Association Studies (GWAS) using a General Linear Model (GLM). ThE following packages also incorporates Principle Companent Analysis (PCA) to power the the GWAS analysis. 
@@ -109,7 +109,7 @@ print(paste("The associated SNPs are ", paste(associated.SNP.names, collapse = "
 GWASP_manhattan <- manhattan_plot(marker_map = snp_info, pvals = p.vec, QTN_index = associated.SNPs) #create manhattan plot
 GWASP_manhattan <- GWASP_manhattan + geom_hline(yintercept = -log10(genome.thresh), linetype = "dashed", color = "black") #add significance threshold
 
-#view updated manhattan plot
+#view updated manhattan plot with significant SNPs 
 GWASP_manhattan 
 
 #After calculating our genome-wide threshold for a Type I error rate of 1%, we observe that we have 43 significantly associated SNPs.

@@ -123,6 +123,7 @@ snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State Universi
 genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
 
 # Replicate 30 times and plot the means with GWASbycor function
+#Simulation with GWASbycor
 nrep=30
 set.seed(99164)
 statRepGWASbycor=replicate(nrep, {
@@ -151,6 +152,54 @@ plot(fdr.mean[,1],power , type="b", col=theColor [1],xlim=c(0,1))
 for(i in 2:ncol(fdr.mean)){
   lines(fdr.mean[,i], power , type="b", col= theColor [i])
 }
+
+#Simulation by qqman
+# Number of GWAS simulations
+num_replicates <- 30  
+
+# Function to perform GWAS using GLM
+perform_gwas <- function() {
+  results <- data.frame(SNP = colnames(genotype_matrix_cleaned), P_value = NA)
+  
+  for (i in 1:ncol(genotype_matrix_cleaned)) {
+    snp_data <- genotype_matrix_cleaned[, i]
+    model_data <- data.frame(trait = trait, snp_data = snp_data, covariate_matrix)
+    
+    # Perform GLM (Linear Regression)
+    model <- glm(trait ~ snp_data + ., data = model_data, family = "gaussian")
+    
+    # Store the p-value of the SNP effect
+    results$P_value[i] <- summary(model)$coefficients[2, 4]
+  }
+  
+  return(results)
+}
+
+# Run GWAS multiple times and store results
+replicated_results <- replicate(num_replicates, perform_gwas(), simplify = FALSE)
+# Compute Power and FDR for each replicate
+alpha <- 0.05  # Significance threshold
+power_fdr_values <- data.frame(Power = numeric(num_replicates), FDR = numeric(num_replicates))
+
+for (i in 1:num_replicates) {
+  p_values <- replicated_results[[i]]$P_value
+  significant_hits <- p_values < alpha
+  power <- sum(significant_hits) / length(p_values)
+  FDR <- sum(significant_hits) / max(1, length(unique(p_values)))
+  
+  power_fdr_values$Power[i] <- power
+  power_fdr_values$FDR[i] <- FDR
+}
+# Plot Power vs. FDR using ggplot2
+ggplot(power_fdr_values, aes(x = FDR, y = Power)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Power vs. FDR in GWAS",
+       x = "False Discovery Rate (FDR)",
+       y = "Power") +
+  theme_minimal()
+
+
 ```
 # Logo
 Logo:  

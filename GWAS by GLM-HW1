@@ -152,3 +152,6 @@ for(i in 2:ncol(fdr.mean)){
   lines(fdr.mean[,i], power , type="b", col= theColor [i])
 }
 ```
+# Logo
+Logo:  
+  ![Logo](/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Homework/Logo.jpg)

@@ -11,22 +11,34 @@ For more details see the code below.
 
 # Install qqman package (if not installed yet)
 
-# Load the necessary libraries
 install.packages("qqman")
 install.packages("bigstatsr")
+
+```{r}
+#Load functions
+library(ggplot2)
 library(qqman)
 library(bigstatsr)
 library(usethis)
 library(devtools)
 
-## Using the Functions of qqman
+source("http://zzlab.net/StaGen/2020/R/G2P.R")
+source("http://zzlab.net/StaGen/2020/R/GWASbyCor.R")
+source("http://zzlab.net/GAPIT/gapit_functions.txt")
 
-#Load files (change file names as needed)
+devtools::install_github("wcrump/GWASP")
+library(GWASP)
+```
+
+```{r}
+# Load files to perform PCA and incorporate PCs as cofactors for GWAS (Question 1) 
+phenotype = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/phenotype.txt", head = T)
+covariate = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/covariate.txt", head = T)
 snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo2.txt", header = TRUE)
+
 genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
 # Remove the first column (Taxa ID) if it's present and should not be included in the analysis
 genotype_matrix <- as.matrix(genotype_data[, -1])
-
 # Check variance of each column for the genotype data
 column_variances <- apply(genotype_matrix, 2, var)
 # Identify columns with zero variance
@@ -35,20 +47,16 @@ zero_variance_columns
 # Remove columns with zero variance
 genotype_matrix_cleaned <- genotype_matrix[, column_variances != 0]
 
-# Load phenotype data 
-phenotype = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/phenotype.txt", head = T)
-# Load covariate data
-covariate = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/covariate.txt", head = T)
-
 # Perform PCA on the genotype data (to capture population structure)
 pca <- prcomp(genotype_matrix_cleaned, scale. = TRUE)
 # Extract the top 10 principal components (adjust as needed)
 pca_data <- pca$x[, 1:10]
+
 # Combine PCA with the covariate data
 covariate_matrix <- cbind(covariate, pca_data)
-
+covariate_matrix<-as.data.frame(covariate_matrix)
 # Combine phenotype and covariates data if needed (ensure matching by Taxa ID)
-combined_data <- merge(phenotype, covariate, by = "Taxa")
+#combined_data <- merge(phenotype, covariate, by = "Taxa")
 
 ###Perform GWAS Using GLM with QQman package
 # Prepare the response variable (trait=plant height (PH))
@@ -56,21 +64,21 @@ trait <- phenotype$PH  # Change "PH" to the actual column name of your phenotype
 
 # Initialize an empty data frame to store results
 results <- data.frame(SNP = colnames(genotype_matrix_cleaned), p_value = NA)
+```
 
-# Perform GWAS for each SNP using GLM
+```{r}
+# Perform GWAS for each SNP using GLM (Question 2 and 4)
 for (i in 1:ncol(genotype_matrix_cleaned)) {
-  snp_data <- genotype_matrix_cleaned[, i]
-  
+     snp_data <- genotype_matrix_cleaned[, i]
   # Create a data frame for the current SNP and covariates
   data_for_model <- data.frame(trait = trait, snp_data = snp_data, covariate_matrix)
   
-  # Fit a logistic regression model (binary phenotype)
+  # Fit a logistic regression model 
   model <- glm(trait ~ snp_data + ., data = data_for_model, family = "gaussian")  # Change to "gaussian" for continuous traits
   
   # Store the p-value from the SNP coefficient
   results$p_value[i] <- summary(model)$coefficients[2, 4]  # p-value of the SNP coefficient
 }
-
 
 # Prepare data for Manhattan plot (using SNP information)
 manhattan_data <- data.frame(
@@ -79,8 +87,7 @@ manhattan_data <- data.frame(
   BP = snp_info$BP,   # Corrected access to position data
   P = results$p_value
 )
-
-# Create Manhattan plot
+# Create Manhattan plot with the first 5 chrs
 library(qqman)
 manhattan(manhattan_data, main = "GWAS Manhattan Plot", col = c("blue4", "orange3","yellow","black","red"),
           ylim=c(0,10))
@@ -88,5 +95,60 @@ manhattan(manhattan_data, main = "GWAS Manhattan Plot", col = c("blue4", "orange
 # Create QQ plot
 qq(results$p_value)
 
+## Genome-wide Threshold and Associated SNP's ----
+p.vec <- as.vector(results$p_value)
+type1= c(0.01, 0.05, 0.1, 0.2)
+cutoff= quantile(p.vec, type1 ,na.rm=T) #calculation of cutoff using quantiles
+genome.thresh <- cutoff[1] #with a type 1 error rate of 1%, we can excpect SNPs with p-values higher than this to be associated SNPs
+associated.SNP.index <- results$p_value <= genome.thresh #creates index of associated SNPs
+associated.SNPs <- which(associated.SNP.index) #let's us know which of our 4299 markers are our significant ones
+snp.names <- colnames(genotype_matrix) #get names of all snps
+associated.SNP.names <- snp.names[associated.SNPs] #get names of associated snps
+print(paste("The associated SNPs are ", paste(associated.SNP.names, collapse = ", "), sep = "")) #output the names of associated snps
 
+GWASP_manhattan <- manhattan_plot(marker_map = snp_info, pvals = p.vec, QTN_index = associated.SNPs) #create manhattan plot
+GWASP_manhattan <- GWASP_manhattan + geom_hline(yintercept = -log10(genome.thresh), linetype = "dashed", color = "black") #add significance threshold
 
+#view updated manhattan plot
+GWASP_manhattan 
+
+#After calculating our genome-wide threshold for a Type I error rate of 1%, we observe that we have 43 significantly associated SNPs.
+#Sub set genotype data
+sig.snps.geno <- genotype_data[,associated.SNPs] #subset genotype data of only the significant SNPs
+```
+```{r}
+#Load files to run simulation with GWASbycor function-30 replicates (question 5)
+
+snp_info <- read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/SNPinfo.txt", header = TRUE)
+genotype_data = read.table(file="C:/Users/51970/OneDrive - Washington State University (email.wsu.edu)/2025 courses/Spring semester 2025/BIO 545/Gwas data-Muluken/Numeric_gen2.txt", head = T)
+
+# Replicate 30 times and plot the means with GWASbycor function
+nrep=30
+set.seed(99164)
+statRepGWASbycor=replicate(nrep, {
+  mySim=G2P(X=genotype_data[,-1],h2=.75,alpha=1,NQTN=10,distribution="norm")
+  p=GWASbyCor(X=genotype_data[,-1],y=mySim$y)
+  seqQTN=mySim$QTN.position
+  myGWAS=cbind(snp_info,t(p),NA)
+  myStat=GAPIT.FDR.TypeI(WS=c(1e0,1e3,1e4,1e5), GM=snp_info,seqQTN=mySim$QTN.position,GWAS=myGWAS,maxOut=100,MaxBP=1e10)
+})
+str(myStat)
+# Power
+power=statRepGWASbycor[[2]]
+# FDR
+s.fdr=seq(3,length(statRepGWASbycor),7)
+fdr=statRepGWASbycor[s.fdr]
+fdr.mean=Reduce ("+", fdr) / length(fdr) #fdr is a list of vectors, Reduce("+", fdr) will sum the vectors element-wise.
+#AUC
+s.auc.fdr=seq(6,length(statRepGWASbycor),7)
+auc.fdr=statRepGWASbycor[s.auc.fdr]
+auc.fdr.mean=Reduce ("+", auc.fdr) / length(auc.fdr)
+
+# Plots of power vs FDR
+theColor=rainbow(4)
+# theColor=c("red","blue","green")
+plot(fdr.mean[,1],power , type="b", col=theColor [1],xlim=c(0,1))
+for(i in 2:ncol(fdr.mean)){
+  lines(fdr.mean[,i], power , type="b", col= theColor [i])
+}
+```
